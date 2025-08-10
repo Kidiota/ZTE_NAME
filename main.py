@@ -3,6 +3,7 @@ import PyPDF2
 import os
 import shutil
 import xlrd
+import time
 
 #修复CropBox问题
 def fix_cropbox(pdf_path, output_path):
@@ -94,11 +95,14 @@ def get_data_from_xlsx(poNo, xlsxData):
         siteID = xlsxData.cell_value(loPO, 23)
         projectName = xlsxData.cell_value(loPO, 1)
         print("Site ID: ", siteID, "PO Number: ", poNo, "Project Name: ", projectName)
+        
     except:
         print("PO Number不存在于xlsx文件中")
         return None
     
-    return None
+    xlsx_info = [siteID, projectName] #格式：[Site ID, Project Name]
+    
+    return xlsx_info
     
 
 
@@ -116,6 +120,7 @@ if os.path.exists('fixed'):
     
 #创建fixed文件夹
 os.mkdir('fixed')
+
 
 #循环修复所有文件
 i = 0
@@ -135,6 +140,7 @@ xlsxData = read_xlsx(xlsxFileName)
 print("读取xlsx文件完成")
 
 #输出修复后的文件名
+all_info = []
 i = 0
 for i in range(len(filesName)):
     print("fixed文件夹内的文件名：", filesName[i])
@@ -145,9 +151,18 @@ for i in range(len(filesName)):
     
     pdf_info = get_pdf_info(pdf_data)
     
-    get_data_from_xlsx(pdf_info[0], xlsxData)    
+    xlsx_info = get_data_from_xlsx(pdf_info[0], xlsxData) 
     
+    one_info = pdf_info + xlsx_info
     
+    print("单个文件所有信息：", one_info)
+    
+    timeNow = "" + time.strftime('%Y-%m-%d', time.localtime())
+    
+    output_file_name = "input\\" + xlsx_info[0] + "_TM_" + xlsx_info[1] + "_PO" + pdf_info[0] + "_" + pdf_info[1] + "_" + timeNow + ".pdf"
+    print("输出文件名：", output_file_name)
+    print("原文件名", filesName[i][6:])
+    os.rename("input\\"+filesName[i][6:],output_file_name)
     
     i = i + 1
 
