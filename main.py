@@ -2,7 +2,7 @@ import pdfplumber
 import PyPDF2
 import os
 import shutil
-import pandas
+import xlrd
 
 #修复CropBox问题
 def fix_cropbox(pdf_path, output_path):
@@ -74,29 +74,48 @@ def get_pdf_info(pdf_data):
     return pdf_info #格式：[PO Number, Final or Not]
     
 #读取xlsx文件
-def read_xlsx(PoNo):
-    rootDir = os.listdir()
-    print("当前目录下的文件有：", rootDir)
+def read_xlsx(xlsxFileName):
+    xlsxData = xlrd.open_workbook(xlsxFileName).sheets()[0]
+    print("读取xlsx文件: ", xlsxFileName)
+    print("工作表名称: ", xlsxData.name)    
+    return xlsxData  # 返回整个工作表数据
+    
+#根据PO Number从xlsx文件中获取数据
+def get_data_from_xlsx(poNo, xlsxData):
     i = 0
-    xlsxFileName = "TM PO TRACKER 20250804.xlsx"
-    while i < len(rootDir):
-        if rootDir[i][4:] == "xlsx":
-            print("找到xlsx文件：", rootDir[i])
-            xlsxFileName = rootDir[i]
-            i = len(rootDir)  # 结束循环
-        i = i + 1
-    allData = pandas.read_excel(xlsxFileName)
-    siteID = allData.loc[allData['PO NO'] == PoNo, 'Site ID']
-    print(siteID)
+    
+    poNo = float(poNo)  # 将PO Number转换为浮点数
+    
+    
+    try:
+        PO_list_raw = xlsxData.col_values(0)  # 获取第一列的所有PO Number
+        loPO = xlsxData.col_values(0).index(poNo)  # 获取PO Number所在行的索引
+        print("PO Number所在行的索引: ", loPO)
+        siteID = xlsxData.cell_value(loPO, 23)
+        projectName = xlsxData.cell_value(loPO, 1)
+        print("Site ID: ", siteID, "PO Number: ", poNo, "Project Name: ", projectName)
+    except:
+        print("PO Number不存在于xlsx文件中")
+        return None
+    
+    return None
+    
 
 
-os.mkdir('fixed')
+
 
 #读取input文件夹内文件的文件名
 folder_path = "input"
 filesName = os.listdir(folder_path)             #以列表方式记录所有文件名
 
 
+#如果存在fixed文件夹，则删除
+if os.path.exists('fixed'):
+    shutil.rmtree('fixed')
+    print("已删除旧的fixed文件夹")
+    
+#创建fixed文件夹
+os.mkdir('fixed')
 
 #循环修复所有文件
 i = 0
@@ -109,6 +128,12 @@ while i < len(filesName):
 
 filesName = os.listdir("fixed")
 
+#读取xlsx文件
+xlsxFileName = "TM PO TRACKER 20250804.xlsx"
+print("读取xlsx文件")
+xlsxData = read_xlsx(xlsxFileName)
+print("读取xlsx文件完成")
+
 #输出修复后的文件名
 i = 0
 for i in range(len(filesName)):
@@ -118,9 +143,11 @@ for i in range(len(filesName)):
 
     pdf_data = make_it_readable(raw_data[0])
     
-    get_pdf_info(pdf_data)
+    pdf_info = get_pdf_info(pdf_data)
     
-    read_xlsx(get_pdf_info(pdf_data)[0])
+    get_data_from_xlsx(pdf_info[0], xlsxData)    
+    
+    
     
     i = i + 1
 
