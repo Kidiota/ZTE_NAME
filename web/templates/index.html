@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PO重命名工具</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body {
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+.container {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    overflow: hidden;
+    padding-bottom: 20px;
+}
+header {
+    background: linear-gradient(90deg, #4b6cb7, #182848);
+    color: white;
+    padding: 25px 30px;
+    text-align: center;
+}
+h1 { font-size: 2rem; margin-bottom: 8px; }
+.subtitle { font-size: 1rem; opacity: 0.9; }
+.main-content { padding: 25px; }
+.upload-area {
+    border: 3px dashed #4b6cb7;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    background: #f8f9ff;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: background 0.3s, border-color 0.3s;
+}
+.upload-area.dragover {
+    background: #dbeafe;
+    border-color: #2563eb;
+}
+.upload-area i { font-size: 3rem; color: #4b6cb7; margin-bottom: 10px; }
+.file-list {
+    margin-top: 15px;
+    background: #eef7ff;
+    border-radius: 10px;
+    padding: 15px;
+    display: none;
+}
+.file-list p { margin: 5px 0; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+.progress-container {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00c853, #009624);
+    width: 0%;
+    transition: width 0.4s ease;
+}
+.status-text { text-align: center; font-size: 1rem; margin: 15px 0; min-height: 25px; }
+#generatedFiles { margin-top: 15px; font-size: 0.9rem; }
+.download-btn {
+    background: linear-gradient(90deg, #ff6b6b, #ff5252);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: none;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+    <h1><i class="fas fa-file-pdf"></i>PO重命名工具</h1>
+    <p class="subtitle">上传多个非规范命名PO文件 和一个 PO TRACKER，等待处理完成后下载结果</p>
+</header>
+<div class="main-content">
+    <div class="upload-area" id="pdfUploadArea">
+        <i class="fas fa-file-upload"></i>
+        <p>点击或拖拽上传 PO 文件（可多选）</p>
+        <input type="file" id="pdfInput" accept="application/pdf" multiple style="display:none;">
+    </div>
+    <div class="upload-area" id="xlsxUploadArea">
+        <i class="fas fa-file-excel"></i>
+        <p>点击或拖拽上传一个 PO TRACKER XLSX 文件</p>
+        <input type="file" id="xlsxInput" accept=".xlsx" style="display:none;">
+    </div>
+    <div class="file-list" id="fileList"></div>
+    <div style="text-align:center;">
+        <button id="startBtn" class="download-btn" style="background:linear-gradient(90deg,#00c853,#009624);display:inline-block;">开始处理</button>
+    </div>
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="status-text" id="statusText">等待开始</div>
+    <div id="generatedFiles"></div>
+    <div style="text-align:center; margin-top:20px;">
+        <a href="/download" class="download-btn" id="downloadBtn">打包下载</a>
+    </div>
+</div>
+</div>
+<script>
+let selectedPDFs = [], selectedXLSX = null;
+
+function updateFileList() {
+    const fileList = document.getElementById("fileList");
+    fileList.innerHTML = "";
+    if (selectedPDFs.length > 0) {
+        selectedPDFs.forEach(f => { fileList.innerHTML += `<p><i class="fas fa-file-pdf"></i> ${f.name}</p>`; });
+    }
+    if (selectedXLSX) {
+        fileList.innerHTML += `<p><i class="fas fa-file-excel"></i> ${selectedXLSX.name}</p>`;
+    }
+    fileList.style.display = (selectedPDFs.length || selectedXLSX) ? "block" : "none";
+}
+
+function setupUploadArea(areaId, inputId, fileType) {
+    const area = document.getElementById(areaId);
+    const input = document.getElementById(inputId);
+
+    // 点击打开文件选择
+    area.addEventListener("click", () => input.click());
+
+    // 拖拽事件
+    area.addEventListener("dragover", e => {
+        e.preventDefault();
+        area.classList.add("dragover");
+    });
+    area.addEventListener("dragleave", () => area.classList.remove("dragover"));
+    area.addEventListener("drop", e => {
+        e.preventDefault();
+        area.classList.remove("dragover");
+        const files = Array.from(e.dataTransfer.files);
+        if (fileType === "pdf") {
+            selectedPDFs = selectedPDFs.concat(files.filter(f => f.type === "application/pdf"));
+        } else if (fileType === "xlsx") {
+            const xlsxFile = files.find(f => f.name.endsWith(".xlsx"));
+            if (xlsxFile) selectedXLSX = xlsxFile;
+        }
+        updateFileList();
+    });
+
+    // 文件选择
+    input.addEventListener("change", e => {
+        if (fileType === "pdf") {
+            selectedPDFs = Array.from(e.target.files);
+        } else if (fileType === "xlsx") {
+            selectedXLSX = e.target.files[0];
+        }
+        updateFileList();
+    });
+}
+
+setupUploadArea("pdfUploadArea", "pdfInput", "pdf");
+setupUploadArea("xlsxUploadArea", "xlsxInput", "xlsx");
+
+document.getElementById("startBtn").addEventListener("click", () => {
+    if (!selectedPDFs.length || !selectedXLSX) { alert("请上传 PDF 和一个 XLSX 文件"); return; }
+    const formData = new FormData();
+    selectedPDFs.forEach(f => formData.append("pdfs", f));
+    formData.append("xlsx", selectedXLSX);
+    fetch("/start_process", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            pollProgress();
+        });
+});
+
+function pollProgress() {
+    const progressBar = document.getElementById("progressBar");
+    const statusText = document.getElementById("statusText");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const fileListDiv = document.getElementById("generatedFiles");
+    const interval = setInterval(() => {
+        fetch("/progress").then(r => r.json()).then(data => {
+            progressBar.style.width = data.percent + "%";
+            statusText.textContent = data.message;
+            if (data.finished) {
+                clearInterval(interval);
+                if (data.files && data.files.length > 0) {
+                    let html = "<b>生成文件列表：</b><br>";
+                    data.files.forEach(f => {
+                        html += `<a href="/download_file/${encodeURIComponent(f)}" target="_blank">${f}</a><br>`;
+                    });
+                    fileListDiv.innerHTML = html;
+                }
+                downloadBtn.style.display = "inline-block";
+            }
+        });
+    }, 1000);
+}
+</script>
+</body>
+</html>
