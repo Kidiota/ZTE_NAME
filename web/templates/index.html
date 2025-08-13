@@ -82,11 +82,32 @@ h1 { font-size: 2rem; margin-bottom: 8px; }
     text-decoration: none;
     display: none;
 }
+/* 让 header 能放绝对定位元素 */
+header { position: relative; }
+
+/* 左上角蓝框标识 */
+.org-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 6px 10px;
+    border: 2px solid #3b82f6;   /* 蓝色边框 */
+    border-radius: 8px;
+    background: rgba(255,255,255,0.85);
+    color: #1e40af;               /* 深蓝文字 */
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    white-space: nowrap;
+    backdrop-filter: blur(2px);
+}
+
 </style>
 </head>
 <body>
 <div class="container">
 <header>
+    <div class="org-badge">马来西亚工程服务处数字化团队</div>
     <h1><i class="fas fa-file-pdf"></i>PO重命名工具</h1>
     <p class="subtitle">上传多个非规范命名PO文件 和一个 PO TRACKER，等待处理完成后下载结果</p>
 </header>
