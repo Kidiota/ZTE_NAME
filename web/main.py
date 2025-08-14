@@ -55,20 +55,24 @@ def get_pdf_info(pdf_data):
     finalOrNot = ""
     poNo = ""
     for line in pdf_data:
-        if line.strip() == "FINAL CERTIFICATE OF ACCEPTANCE":
+        # 统一处理大小写和空格
+        text = line.strip().upper()
+
+        if text == "FINAL CERTIFICATE OF ACCEPTANCE":
             finalOrNot = "FCOA"
-        if line.strip() == "CERTIFICATE OF ACCEPTANCE":
+        elif text == "CERTIFICATE OF ACCEPTANCE":
             finalOrNot = "COA"
-        # 支持以 'PO NUMBER : ' 开头（注意空格）
-        if line.startswith("PO NUMBER : ") or line.startswith("PO NUMBER: "):
-            # 去掉前缀，再取第一个由数字组成的连续片段作为 PO
-            remainder = line.split(":",1)[1].strip()
-            # 取首个由数字/字母混合的片段（直到遇到空格）
+
+        # 支持以 'PO NUMBER :' 或 'PO NUMBER:' 开头
+        if text.startswith("PO NUMBER :") or text.startswith("PO NUMBER:"):
+            # 从原始行提取冒号后面的内容（保留原始大小写以防 PO 编码有字母）
+            remainder = line.split(":", 1)[1].strip()
             poNo_candidate = remainder.split()[0]
             poNo = poNo_candidate
             pdf_info = [poNo, finalOrNot]
             break
     return pdf_info
+
 
 def read_xlsx(xlsxFileName):
     """

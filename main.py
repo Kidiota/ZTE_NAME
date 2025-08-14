@@ -134,7 +134,7 @@ while i < len(filesName):
 filesName = os.listdir("fixed")
 
 #读取xlsx文件
-xlsxFileName = "TM PO TRACKER 20250804.xlsx"
+xlsxFileName = "TM PO TRACKER.xlsx"
 print("读取xlsx文件")
 xlsxData = read_xlsx(xlsxFileName)
 print("读取xlsx文件完成")
