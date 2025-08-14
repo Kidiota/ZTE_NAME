@@ -29,6 +29,7 @@ header {
     color: white;
     padding: 25px 30px;
     text-align: center;
+    position: relative;
 }
 h1 { font-size: 2rem; margin-bottom: 8px; }
 .subtitle { font-size: 1rem; opacity: 0.9; }
@@ -82,63 +83,101 @@ h1 { font-size: 2rem; margin-bottom: 8px; }
     text-decoration: none;
     display: none;
 }
-/* 让 header 能放绝对定位元素 */
-header { position: relative; }
-
 /* 左上角蓝框标识 */
 .org-badge {
     position: absolute;
     top: 10px;
     left: 10px;
     padding: 6px 10px;
-    border: 2px solid #3b82f6;   /* 蓝色边框 */
+    border: 2px solid #3b82f6;
     border-radius: 8px;
     background: rgba(255,255,255,0.85);
-    color: #1e40af;               /* 深蓝文字 */
+    color: #1e40af;
     font-weight: 600;
     font-size: 0.95rem;
     line-height: 1;
     white-space: nowrap;
     backdrop-filter: blur(2px);
 }
-
+/* 右上角语言切换按钮 */
+.lang-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    color: #182848;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
 </style>
 </head>
 <body>
 <div class="container">
 <header>
     <div class="org-badge">马来西亚工程服务处数字化团队</div>
-    <h1><i class="fas fa-file-pdf"></i>PO重命名工具</h1>
-    <p class="subtitle">上传多个非规范命名PO文件 和一个 PO TRACKER，等待处理完成后下载结果</p>
+    <button id="langToggle" class="lang-toggle">English</button>
+    <h1><i class="fas fa-file-pdf"></i> <span data-i18n="title">PO重命名工具</span></h1>
+    <p class="subtitle" data-i18n="subtitle">上传多个非规范命名PO文件 和一个 PO TRACKER，等待处理完成后下载结果</p>
 </header>
 <div class="main-content">
     <div class="upload-area" id="pdfUploadArea">
         <i class="fas fa-file-upload"></i>
-        <p>点击或拖拽上传 PO 文件（可多选）</p>
+        <p data-i18n="uploadPDF">点击或拖拽上传 PO 文件（可多选）</p>
         <input type="file" id="pdfInput" accept="application/pdf" multiple style="display:none;">
     </div>
     <div class="upload-area" id="xlsxUploadArea">
         <i class="fas fa-file-excel"></i>
-        <p>点击或拖拽上传一个 PO TRACKER XLSX 文件</p>
+        <p data-i18n="uploadXLSX">点击或拖拽上传一个 PO TRACKER XLSX 文件</p>
         <input type="file" id="xlsxInput" accept=".xlsx" style="display:none;">
     </div>
     <div class="file-list" id="fileList"></div>
     <div style="text-align:center;">
-        <button id="startBtn" class="download-btn" style="background:linear-gradient(90deg,#00c853,#009624);display:inline-block;">开始处理</button>
+        <button id="startBtn" class="download-btn" style="background:linear-gradient(90deg,#00c853,#009624);display:inline-block;" data-i18n="start">开始处理</button>
     </div>
     <div class="progress-container">
         <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div class="status-text" id="statusText">等待开始</div>
+    <div class="status-text" id="statusText" data-i18n="wait">等待开始</div>
     <div id="generatedFiles"></div>
     <div style="text-align:center; margin-top:20px;">
-        <a href="/download" class="download-btn" id="downloadBtn">打包下载</a>
+        <a href="/download" class="download-btn" id="downloadBtn" data-i18n="downloadAll">打包下载</a>
     </div>
 </div>
 </div>
 <script>
+const translations = {
+    zh: {
+        title: "PO重命名工具",
+        subtitle: "上传多个非规范命名PO文件 和一个 PO TRACKER，等待处理完成后下载结果",
+        uploadPDF: "点击或拖拽上传 PO 文件（可多选）",
+        uploadXLSX: "点击或拖拽上传一个 PO TRACKER XLSX 文件",
+        start: "开始处理",
+        wait: "等待开始",
+        downloadAll: "打包下载"
+    },
+    en: {
+        title: "PO Renaming Tool",
+        subtitle: "Upload multiple non-standard named PO files and one PO TRACKER, then wait for processing to complete before downloading results",
+        uploadPDF: "Click or drag to upload PO files (multiple allowed)",
+        uploadXLSX: "Click or drag to upload one PO TRACKER XLSX file",
+        start: "Start Processing",
+        wait: "Waiting to start",
+        downloadAll: "Download All"
+    }
+};
+let currentLang = "zh";
+document.getElementById("langToggle").addEventListener("click", () => {
+    currentLang = currentLang === "zh" ? "en" : "zh";
+    document.getElementById("langToggle").textContent = currentLang === "zh" ? "English" : "中文";
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        el.textContent = translations[currentLang][key];
+    });
+});
 let selectedPDFs = [], selectedXLSX = null;
-
 function updateFileList() {
     const fileList = document.getElementById("fileList");
     fileList.innerHTML = "";
@@ -150,19 +189,11 @@ function updateFileList() {
     }
     fileList.style.display = (selectedPDFs.length || selectedXLSX) ? "block" : "none";
 }
-
 function setupUploadArea(areaId, inputId, fileType) {
     const area = document.getElementById(areaId);
     const input = document.getElementById(inputId);
-
-    // 点击打开文件选择
     area.addEventListener("click", () => input.click());
-
-    // 拖拽事件
-    area.addEventListener("dragover", e => {
-        e.preventDefault();
-        area.classList.add("dragover");
-    });
+    area.addEventListener("dragover", e => { e.preventDefault(); area.classList.add("dragover"); });
     area.addEventListener("dragleave", () => area.classList.remove("dragover"));
     area.addEventListener("drop", e => {
         e.preventDefault();
@@ -176,8 +207,6 @@ function setupUploadArea(areaId, inputId, fileType) {
         }
         updateFileList();
     });
-
-    // 文件选择
     input.addEventListener("change", e => {
         if (fileType === "pdf") {
             selectedPDFs = Array.from(e.target.files);
@@ -187,23 +216,17 @@ function setupUploadArea(areaId, inputId, fileType) {
         updateFileList();
     });
 }
-
 setupUploadArea("pdfUploadArea", "pdfInput", "pdf");
 setupUploadArea("xlsxUploadArea", "xlsxInput", "xlsx");
-
 document.getElementById("startBtn").addEventListener("click", () => {
-    if (!selectedPDFs.length || !selectedXLSX) { alert("请上传 PDF 和一个 XLSX 文件"); return; }
+    if (!selectedPDFs.length || !selectedXLSX) { alert(currentLang === "zh" ? "请上传 PDF 和一个 XLSX 文件" : "Please upload PDF(s) and one XLSX file"); return; }
     const formData = new FormData();
     selectedPDFs.forEach(f => formData.append("pdfs", f));
     formData.append("xlsx", selectedXLSX);
     fetch("/start_process", { method: "POST", body: formData })
         .then(res => res.json())
-        .then(data => {
-            if (data.error) { alert(data.error); return; }
-            pollProgress();
-        });
+        .then(data => { if (data.error) { alert(data.error); return; } pollProgress(); });
 });
-
 function pollProgress() {
     const progressBar = document.getElementById("progressBar");
     const statusText = document.getElementById("statusText");
@@ -217,9 +240,7 @@ function pollProgress() {
                 clearInterval(interval);
                 if (data.files && data.files.length > 0) {
                     let html = "<b>生成文件列表：</b><br>";
-                    data.files.forEach(f => {
-                        html += `<a href="/download_file/${encodeURIComponent(f)}" target="_blank">${f}</a><br>`;
-                    });
+                    data.files.forEach(f => { html += `<a href="/download_file/${encodeURIComponent(f)}" target="_blank">${f}</a><br>`; });
                     fileListDiv.innerHTML = html;
                 }
                 downloadBtn.style.display = "inline-block";
